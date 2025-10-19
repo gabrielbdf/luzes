@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import vertexShader from '../shaders/flame.vert';
 import fragmentShader from '../shaders/flame.frag';
 
-const AnimatedFlame: React.FC<{ color: string; position: [number, number, number] }> = ({ color, position }) => {
+const AnimatedFlame: React.FC<{ color: string; position: [number, number, number]; rotateDeg?: number }> = ({ color, position, rotateDeg = 0 }) => {
   const materialRef = useRef<THREE.ShaderMaterial | null>(null);
 
   const material = useMemo(() => {
@@ -32,8 +32,10 @@ const AnimatedFlame: React.FC<{ color: string; position: [number, number, number
     materialRef.current = material;
   });
 
+  const angleRad = (rotateDeg * Math.PI) / 180;
+
   return (
-    <mesh position={position} scale={[1.2, 2.2, 1.2]}>
+    <mesh position={position} scale={[1.2, 2.2, 1.2]} rotation={[0, 0, angleRad]}>
       <planeGeometry args={[1, 1, 32, 64]} />
       <primitive object={material} />
     </mesh>
@@ -45,8 +47,8 @@ export const TemperatureContent: React.FC = () => (
     <div className="w-full max-w-md my-4 h-48 relative">
       <Canvas camera={{ position: [0, 0, 4], fov: 50 }}>
         <ambientLight intensity={0.5} />
-        <AnimatedFlame color="#3b82f6" position={[-2.2, 0.4, 1]} />
-        <AnimatedFlame color="#f59e0b" position={[2.2, 0.4, 1]} />
+        <AnimatedFlame color="#3b82f6" position={[-2.2, 0, 1]} rotateDeg={180} />
+        <AnimatedFlame color="#f59e0b" position={[2.2, 0, 1]} rotateDeg={180} />
       </Canvas>
       <div className="absolute bottom-0 left-0 right-0 flex justify-between px-8 text-white text-sm">
         <span>Mais Quente</span>

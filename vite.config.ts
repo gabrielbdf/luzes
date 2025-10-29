@@ -6,6 +6,7 @@ import glsl from 'vite-plugin-glsl';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
+      base: mode === 'production' ? '/luzes/' : '/',
       server: {
         port: 3000,
         host: '0.0.0.0',

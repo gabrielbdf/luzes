@@ -18,6 +18,21 @@ export type AudioKey =
   | 'compositionTopic'
   | 'neighborsTopic'
   | 'quizQuestion'
+  | 'quizQuestion2'
+  | 'quizQuestion3'
+  | 'quizQuestion4'
   | 'quizCorrect'
+  | 'quizCorrect2'
+  | 'quizCorrect3'
+  | 'quizCorrect4'
   | 'quizWrong'
+  | 'quizWrong2'
+  | 'quizWrong3'
+  | 'quizWrong4'
   | 'credits';
+
+export interface WordTiming {
+  word: string;
+  start: number; // tempo em segundos
+  end: number;   // tempo em segundos
+}

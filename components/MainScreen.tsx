@@ -4,13 +4,18 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import vertexShader from '../shaders/sun.vert';
 import fragmentShader from '../shaders/sun.frag';
+import SyncedCaption from './SyncedCaption';
 
 interface MainScreenProps {
   onTopicSelect: (topic: Topic) => void;
   onStartQuiz: () => void;
   visitedTopics: Set<Topic>;
+  isTopicUnlocked: (topic: Topic) => boolean;
   speak: (key: AudioKey) => void;
   narrationKey: AudioKey;
+  currentNarrationText?: string;
+  currentWordTimings?: any[];
+  currentTime?: number;
 }
 
 // Animated sun layer using the existing flame shaders
@@ -53,7 +58,7 @@ const AnimatedSunLayer: React.FC<{ color: string; size: number; speed: number; r
 
 const SunCanvas: React.FC = () => {
   return (
-    <Canvas camera={{ position: [0, 0, 6], fov: 50 }} className="absolute inset-0">
+    <Canvas id="sun-canvas" camera={{ position: [0, 0, 6], fov: 50 }} className="absolute inset-0">
       <ambientLight intensity={0.2} />
       <pointLight intensity={1.5} distance={5} color={new THREE.Color('#ffdca8')} />
       {/* central emissive sphere to give a volumetric plasma feel */}
@@ -121,20 +126,22 @@ const PointsField: React.FC<{ count?: number; radius?: number }> = ({ count = 10
   return <points ref={ref} geometry={geo} material={mat} />;
 };
 
-const TopicButton: React.FC<{ topic: Topic; position: string; onClick: () => void; isVisited: boolean }> = ({ topic, position, onClick, isVisited }) => (
+const TopicButton: React.FC<{ topic: Topic; position: string; onClick: () => void; isVisited: boolean; isUnlocked: boolean }> = ({ topic, position, onClick, isVisited, isUnlocked }) => (
   <button
+    id={`topic-button-${topic.toLowerCase()}`}
     onClick={onClick}
-    className={`absolute ${position} w-28 flex flex-col items-center group transform transition-transform hover:scale-110`}
+    disabled={!isUnlocked}
+    className={`absolute ${position} w-28 flex flex-col items-center group transform transition-transform ${isUnlocked ? 'hover:scale-110 cursor-pointer' : 'cursor-not-allowed opacity-50'}`}
   >
     <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full bg-white flex items-center justify-center shadow-lg ${!isVisited ? 'animate-pulse-bright' : 'bg-opacity-50'}`}>
-        <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-yellow-300"></div>
+        <div className={`w-4 h-4 md:w-5 md:h-5 rounded-full ${isUnlocked ? 'bg-yellow-300' : 'bg-gray-400'}`}></div>
     </div>
-    <span className="mt-3 text-center text-base md:text-lg font-bold text-white transition-colors group-hover:text-yellow-300 drop-shadow-md">{topic}</span>
+    <span className={`mt-3 text-center text-base md:text-lg font-bold transition-colors drop-shadow-md ${isUnlocked ? 'text-white group-hover:text-yellow-300' : 'text-gray-400'}`}>{topic}</span>
   </button>
 );
 
 
-const MainScreen: React.FC<MainScreenProps> = ({ onTopicSelect, onStartQuiz, visitedTopics, speak, narrationKey }) => {
+const MainScreen: React.FC<MainScreenProps> = ({ onTopicSelect, onStartQuiz, visitedTopics, isTopicUnlocked, speak, narrationKey, currentNarrationText = '', currentWordTimings = [], currentTime = 0 }) => {
   const allTopicsVisited = visitedTopics.size === 3;
 
   useEffect(() => {
@@ -142,35 +149,47 @@ const MainScreen: React.FC<MainScreenProps> = ({ onTopicSelect, onStartQuiz, vis
   }, [speak, narrationKey]);
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center relative p-4 md:p-8">
+    <div id="main-screen" className="w-full h-full flex flex-col items-center justify-center relative p-4 md:p-8">
 
-      <div className="flex items-center justify-center w-full my-8 md:my-16">
-        <div className="relative w-56 h-56 md:w-80 md:h-80">
+      <div id="sun-container" className="flex items-center justify-center w-full my-8 md:my-16">
+        <div id="sun-canvas-wrapper" className="relative w-56 h-56 md:w-80 md:h-80">
           <SunCanvas />
           <TopicButton 
             topic={Topic.Temperature} 
             position="top-[-60px] md:top-[-120px] left-1/2 -translate-x-1/2" 
             onClick={() => onTopicSelect(Topic.Temperature)} 
-            isVisited={visitedTopics.has(Topic.Temperature)} 
+            isVisited={visitedTopics.has(Topic.Temperature)}
+            isUnlocked={isTopicUnlocked(Topic.Temperature)}
           />
           <TopicButton 
             topic={Topic.Composition} 
             position="top-1/2 -translate-y-1/2 left-[-110px] md:left-[-140px]" 
             onClick={() => onTopicSelect(Topic.Composition)} 
-            isVisited={visitedTopics.has(Topic.Composition)} 
+            isVisited={visitedTopics.has(Topic.Composition)}
+            isUnlocked={isTopicUnlocked(Topic.Composition)}
           />
           <TopicButton 
             topic={Topic.Neighbors} 
             position="top-1/2 -translate-y-1/2 right-[-110px] md:right-[-140px]" 
             onClick={() => onTopicSelect(Topic.Neighbors)} 
-            isVisited={visitedTopics.has(Topic.Neighbors)} 
+            isVisited={visitedTopics.has(Topic.Neighbors)}
+            isUnlocked={isTopicUnlocked(Topic.Neighbors)}
           />
         </div>
       </div>
 
+      {currentNarrationText && currentWordTimings.length > 0 ? (
+        <SyncedCaption 
+          wordTimings={currentWordTimings} 
+          currentTime={currentTime} 
+          fullText={currentNarrationText} 
+        />
+      ) : null}
+
       {allTopicsVisited && (
-        <div className="mt-8 text-center animate-bounce">
+        <div id="quiz-button-container" className="mt-8 text-center animate-bounce">
           <button
+            id="start-quiz-button"
             onClick={onStartQuiz}
             className="px-8 py-4 bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xl md:text-2xl font-bold rounded-full shadow-lg transition-transform hover:scale-105"
           >

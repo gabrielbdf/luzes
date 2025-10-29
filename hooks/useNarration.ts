@@ -1,8 +1,7 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { audioAssets } from '../audioAssets';
-import { AudioKey } from '../types';
+import { AudioKey, WordTiming } from '../types';
 
-// Helper to load and decode audio file
 async function loadAudioFile(url: string, ctx: AudioContext): Promise<AudioBuffer> {
   console.log('Loading audio from:', url);
   const response = await fetch(url);
@@ -18,6 +17,11 @@ export const useNarration = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const audioBufferCacheRef = useRef<Map<AudioKey, AudioBuffer>>(new Map());
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [currentNarrationText, setCurrentNarrationText] = useState<string>('');
+  const [currentWordTimings, setCurrentWordTimings] = useState<WordTiming[]>([]);
+  const [currentTime, setCurrentTime] = useState(0);
+  const animationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     // Using 'any' for webkitAudioContext to support older Safari versions
@@ -67,7 +71,7 @@ export const useNarration = () => {
       return null;
     }
 
-    const audioUrl = audioAssets[key];
+    const audioUrl = audioAssets[key].src;
     console.log('Audio URL:', audioUrl);
     if (!audioUrl || audioUrl.startsWith('// PLACEHOLDER')) {
         console.error(`Audio asset for key "${key}" not found or is a placeholder.`);
@@ -85,6 +89,11 @@ export const useNarration = () => {
     }
   }, []);
 
+  const clearNarration = useCallback(() => {
+    setCurrentNarrationText('');
+    setCurrentWordTimings([]);
+  }, []);
+
   const cancel = useCallback(() => {
     if (currentSourceRef.current) {
       try {
@@ -94,6 +103,12 @@ export const useNarration = () => {
         console.warn("Audio source could not be stopped:", error);
       }
       currentSourceRef.current = null;
+      setIsSpeaking(false);
+      setCurrentTime(0);
+    }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
     }
   }, []);
 
@@ -109,12 +124,33 @@ export const useNarration = () => {
     const source = audioContextRef.current.createBufferSource();
     source.buffer = buffer;
     source.connect(audioContextRef.current.destination);
+    
+    const startTime = audioContextRef.current.currentTime;
     source.start();
     
     currentSourceRef.current = source;
+    setIsSpeaking(true);
+    
+    // Rastrear o tempo atual durante a reprodução
+    const trackTime = () => {
+      if (audioContextRef.current && currentSourceRef.current === source) {
+        const elapsed = audioContextRef.current.currentTime - startTime;
+        setCurrentTime(Math.max(0, elapsed));
+        animationFrameRef.current = requestAnimationFrame(trackTime);
+      }
+    };
+    
+    animationFrameRef.current = requestAnimationFrame(trackTime);
+    
     source.onended = () => {
         if (currentSourceRef.current === source) {
             currentSourceRef.current = null;
+            setIsSpeaking(false);
+            setCurrentTime(0);
+            if (animationFrameRef.current) {
+              cancelAnimationFrame(animationFrameRef.current);
+              animationFrameRef.current = null;
+            }
         }
     };
   }, [cancel]);
@@ -122,6 +158,10 @@ export const useNarration = () => {
   const speak = useCallback(async (key: AudioKey) => {
     console.log('Speaking key:', key);
     if (!key) return;
+    
+    setCurrentNarrationText(audioAssets[key].text);
+    setCurrentWordTimings(audioAssets[key].wordTimings || []);
+    setCurrentTime(0);
     
     const buffer = await getAudioBuffer(key);
     if (buffer) {
@@ -134,5 +174,5 @@ export const useNarration = () => {
   }, [getAudioBuffer, playAudioBuffer]);
 
 
-  return { speak, cancel };
+  return { speak, cancel, clearNarration, isSpeaking, currentNarrationText, currentWordTimings, currentTime };
 };

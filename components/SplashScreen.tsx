@@ -20,8 +20,8 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
   };
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-center bg-[#0C143E] animate-fadeIn cursor-pointer" onClick={handleClick}>
-      <svg width="300" height="200" viewBox="0 0 300 200">
+    <div id="splash-screen" className="w-full h-full flex flex-col items-center justify-center bg-[#0C143E] animate-fadeIn cursor-pointer" onClick={handleClick}>
+      <svg id="splash-prism-animation" width="300" height="200" viewBox="0 0 300 200">
         {/* Prism */}
         <path d="M 150 50 L 120 125 L 180 125 Z" fill="rgba(255,255,255,0.2)" stroke="white" strokeWidth="1" />
         
@@ -37,7 +37,7 @@ const SplashScreen: React.FC<SplashScreenProps> = ({ onComplete }) => {
         <rect x="150" y="99" width="150" height="2" fill="#3b82f6" className="rainbow-beam" style={{ '--angle': '10deg' } as React.CSSProperties} />
         <rect x="150" y="99" width="150" height="2" fill="#8b5cf6" className="rainbow-beam" style={{ '--angle': '15deg' } as React.CSSProperties} />
       </svg>
-      <p className="mt-8 text-2xl text-gray-300 tracking-widest animate-pulse">
+      <p id="splash-text" className="mt-8 text-2xl text-gray-300 tracking-widest animate-pulse">
         {canProceed ? 'Clique para continuar...' : 'Analisando a luz...'}
       </p>
     </div>
